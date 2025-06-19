@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Emissions Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --accent-primary: #8b5a5a;
+            --accent-secondary: #a67c73;
+            --border-color: #e5e5e5;
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
+            --green-accent: #4ade80;
+            --orange-accent: #fb923c;
+            --purple-accent: #a855f7;
+            --red-accent: #ef4444;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-card: #333333;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --text-muted: #888888;
+            --border-color: #404040;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        /* Loader */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader-content {
+            text-align: center;
+            color: white;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-secondary);
+            padding: 1rem 0;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-primary);
+        }
+
+        .theme-toggle {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-primary);
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Brand Kits Section */
+        .brand-kits {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand-kits::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .brand-kits h2 {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .brand-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .brand-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .brand-item:hover {
+            background: rgba(0, 0, 0, 0.4);
+            transform: translateX(10px);
+        }
+
+        .brand-item.active {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .brand-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .brand-checkbox.checked {
+            background: var(--purple-accent);
+            border-color: var(--purple-accent);
+        }
+
+        .brand-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .brand-icon.green { background: var(--green-accent); }
+        .brand-icon.orange { background: var(--orange-accent); }
+        .brand-icon.red { background: var(--red-accent); }
+
+        .brand-name {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .brand-settings {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.2rem;
+        }
+
+        /* Dashboard Section */
+        .dashboard {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            box-shadow: var(--shadow);
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-title {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: var(--text-primary);
+            letter-spacing: 2px;
+        }
+
+        .dashboard-subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .download-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+            color: var(--accent-primary);
+        }
+
+        /* Filters */
+        .filters {
+            margin-bottom: 2rem;
+        }
+
+        .filter-group {
+            margin-bottom: 1rem;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .filter-btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        .filter-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Chart Section */
+        .chart-container {
+            margin: 2rem 0;
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-line {
+            width: 20px;
+            height: 2px;
+            border-radius: 1px;
+        }
+
+        .legend-line.dashed {
+            border-top: 2px dashed var(--accent-primary);
+            background: none;
+        }
+
+        .legend-line.solid {
+            background: var(--accent-primary);
+        }
+
+        .chart {
+            height: 400px;
+            display: flex;
+            align-items: end;
+            gap: 0.5rem;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            border-left: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .chart-bar {
+            background: var(--accent-primary);
+            border-radius: 4px 4px 0 0;
+            min-width: 20px;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .chart-bar:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+
+        .chart-bar::after {
+            content: attr(data-value);
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .chart-y-axis {
+            position: absolute;
+            left: -30px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Portfolio Stats */
+        .portfolio-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-header {
+            margin-bottom: 2rem;
+        }
+
+        .stat-title {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-unit {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: var(--text-primary);
+            margin: 1rem 0;
+        }
+
+        .stat-change {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .stat-change.positive {
+            color: var(--green-accent);
+        }
+
+        .stat-change.negative {
+            color: var(--red-accent);
+        }
+
+        .stat-period {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .stat-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .stat-bar-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stat-year {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            min-width: 40px;
+        }
+
+        .stat-bar {
+            flex: 1;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .stat-bar-fill {
+            height: 100%;
+            background: var(--accent-primary);
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+
+        .stat-value-small {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .stat-footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .stat-footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .stat-footer a:hover {
+            color: var(--accent-primary);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+            }
+
+            .dashboard-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .dashboard-title {
+                font-size: 2rem;
+            }
+
+            .filter-buttons {
+                justify-content: center;
+            }
+
+            .chart {
+                height: 300px;
+                overflow-x: auto;
+            }
+
+            .brand-list {
+                gap: 0.75rem;
+            }
+
+            .brand-item {
+                padding: 0.75rem;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+            }
+
+            .portfolio-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1rem 0.5rem;
+            }
+
+            .brand-kits,
+            .dashboard,
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .dashboard-title {
+                font-size: 1.5rem;
+            }
+
+            .stat-value {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loader -->
+    <div class="loader" id="loader">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <h3>Loading Carbon Dashboard...</h3>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav">
+            <div class="logo">Carbon Analytics</div>
+            <ul class="nav-links">
+                <li><a href="#brand-kits">Brand Kits</a></li>
+                <li><a href="#dashboard">Dashboard</a></li>
+                <li><a href="#portfolio">Portfolio</a></li>
+            </ul>
+            <button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Theme</button>
+        </nav>
+    </header>
+
+    <div class="container">
+        <!-- Brand Kits Section -->
+        <section id="brand-kits" class="brand-kits">
+            <h2>Brand Kits</h2>
+            <div class="brand-list">
+                <div class="brand-item" onclick="toggleBrand(this)">
+                    <div class="brand-checkbox"></div>
+                    <div class="brand-icon green">E</div>
+                    <div class="brand-name">ECorp</div>
+                    <div class="brand-settings">⚙</div>
+                </div>
+                <div class="brand-item" onclick="toggleBrand(this)">
+                    <div class="brand-checkbox"></div>
+                    <div class="brand-icon orange">I</div>
+                    <div class="brand-name">ICorp</div>
+                    <div class="brand-settings">⚙</div>
+                </div>
+                <div class="brand-item active" onclick="toggleBrand(this)">
+                    <div class="brand-checkbox checked"></div>
+                    <div class="brand-icon red">A</div>
+                    <div class="brand-name">The Agency</div>
+                    <div class="brand-settings">⚙</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="dashboard">
+            <div class="dashboard-header">
+                <div>
+                    <h1 class="dashboard-title">EMBODIED CARBON EMISSIONS</h1>
+                    <div class="dashboard-subtitle">Intensity measured by kgCO₂e/m²</div>
+                </div>
+                <a href="#" class="download-btn">Download the data ↓</a>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label class="filter-label">Filter by</label>
+                    <div class="filter-buttons">
+                        <button class="filter-btn">Type</button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <div class="filter-buttons">
+                        <button class="filter-btn">Refurbishment</button>
+                        <button class="filter-btn">New build</button>
+                        <button class="filter-btn active">All</button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <div class="filter-buttons">
+                        <button class="filter-btn">Status</button>
+                        <button class="filter-btn active">Complete</button>
+                        <button class="filter-btn">Estimate</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Legend -->
+            <div class="chart-container">
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <div class="legend-line dashed"></div>
+                        <span>500 kgCO₂e/m² - Embodied Carbon Target 2030</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line solid"></div>
+                        <span>600 kgCO₂e/m² - Embodied Carbon Target 2025</span>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="chart" id="chart">
+                    <div class="chart-y-axis">
+                        <span>1200</span>
+                        <span>1000</span>
+                        <span>800</span>
+                        <span>600</span>
+                        <span>400</span>
+                        <span>200</span>
+                        <span>0</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Portfolio Stats -->
+        <section id="portfolio" class="portfolio-stats">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Managed portfolio carbon footprint</div>
+                    <div class="stat-unit">tCO₂e</div>
+                </div>
+                <div class="stat-value">45,048</div>
+                <div class="stat-change positive">
+                    ↗ 16% <span class="stat-period">from 2019</span>
+                </div>
+                <div class="stat-bars">
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2022</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 100%"></div>
+                        </div>
+                        <div class="stat-value-small">45,048</div>
+                    </div>
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2021</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 32%"></div>
+                        </div>
+                        <div class="stat-value-small">14,111</div>
+                    </div>
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2020</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 73%"></div>
+                        </div>
+                        <div class="stat-value-small">32,813</div>
+                    </div>
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2019</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 86%"></div>
+                        </div>
+                        <div class="stat-value-small">38,673</div>
+                    </div>
+                </div>
+                <div class="stat-footer">
+                    <a href="#">See full breakdown of carbon footprint →</a>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Managed portfolio energy intensity</div>
+                    <div class="stat-unit">kWh/m²</div>
+                </div>
+                <div class="stat-value">123</div>
+                <div class="stat-change negative">
+                    ↘ 22% <span class="stat-period">from 2019</span>
+                </div>
+                <div class="stat-bars">
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2022</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 78%"></div>
+                        </div>
+                        <div class="stat-value-small">123</div>
+                    </div>
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2021</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 82%"></div>
+                        </div>
+                        <div class="stat-value-small">128</div>
+                    </div>
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2020</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 86%"></div>
+                        </div>
+                        <div class="stat-value-small">135</div>
+                    </div>
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2019</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 100%"></div>
+                        </div>
+                        <div class="stat-value-small">157</div>
+                    </div>
+                </div>
+                <div class="stat-footer">
+                    <a href="#">Download the data ↓</a>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Managed portfolio energy consumption</div>
+                    <div class="stat-unit">kWh</div>
+                </div>
+                <div class="stat-value">47,790,662</div>
+                <div class="stat-change negative">
+                    ↘ 27% <span class="stat-period">from 2019</span>
+                </div>
+                <div class="stat-bars">
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2022</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 73%"></div>
+                        </div>
+                        <div class="stat-value-small">47,790,662</div>
+                    </div>
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2021</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 76%"></div>
+                        </div>
+                        <div class="stat-value-small">49,324,077</div>
+                    </div>
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2020</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 75%"></div>
+                        </div>
+                        <div class="stat-value-small">48,784,205</div>
+                    </div>
+                    <div class="stat-bar-item">
+                        <div class="stat-year">2019</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" style="width: 100%"></div>
+                        </div>
+                        <div class="stat-value-small">65,198,706</div>
+                    </div>
+                </div>
+                <div class="stat-footer">
+                    <a href="#">Download the data ↓</a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Loader functionality
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                document.getElementById('loader').classList.add('hidden');
+            }, 2000);
+        });
+
+        // Theme toggle functionality
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+            }
+        });
+
+        // Brand toggle functionality
+        function toggleBrand(element) {
+            const checkbox = element.querySelector('.brand-checkbox');
+            const isActive = element.classList.contains('active');
+            
+            if (isActive) {
+                element.classList.remove('active');
+                checkbox.classList.remove('checked');
+            } else {
+                element.classList.add('active');
+                checkbox.classList.add('checked');
+            }
+        }
+
+        // Filter functionality
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const group = this.parentElement;
+                group.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                updateChart();
+            });
+        });
+
+        // Chart data
+        const chartData = [
+            { value: 549, height: 45 },
+            { value: 278, height: 23 },
+            { value: 875, height: 73 },
+            { value: 617, height: 51 },
+            { value: 506, height: 42 },
+            { value: 36, height: 3 },
+            { value: 185, height: 15 },
+            { value: 191, height: 16 },
+            { value: 122, height: 10 },
+            { value: 550, height: 46 },
+            { value: 881, height: 73 },
+            { value: 539, height: 45 },
+            { value: 269, height: 22 },
+            { value: 29, height: 2 },
+            { value: 82, height: 7 },
+            { value: 44, height: 4 },
+            { value: 109, height: 9 },
+            { value: 106, height: 9 },
+            { value: 607, height: 50 },
+            { value: 528, height: 44 }
+        ];
+
+        // Update chart with data
+        function updateChart() {
+            const chart = document.getElementById('chart');
+            const existingBars = chart.querySelectorAll('.chart-bar');
+            existingBars.forEach(bar => bar.remove());
+
+            chartData.forEach((data, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = `${data.height}%`;
+                bar.setAttribute('data-value', data.value);
+                bar.style.animationDelay = `${index * 0.1}s`;
+                
+                // Add hover effect
+                bar.addEventListener('mouseenter', function() {
+                    this.style.filter = 'brightness(1.2)';
+                });
+                
+                bar.addEventListener('mouseleave', function() {
+                    this.style.filter = 'brightness(1)';
+                });
+
+                chart.appendChild(bar);
+            });
+        }
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Animate bars on scroll
+        function animateOnScroll() {
+            const statBars = document.querySelectorAll('.stat-bar-fill');
+            statBars.forEach(bar => {
+                const rect = bar.getBoundingClientRect();
+                const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+                
+                if (isVisible && !bar.classList.contains('animated')) {
+                    bar.classList.add('animated');
+                    const width = bar.style.width;
+                    bar.style.width = '0%';
+                    setTimeout(() => {
+                        bar.style.width = width;
+                    }, 100);
+                }
+            });
+        }
+
+        // Counter animation
+        function animateCounters() {
+            const counters = document.querySelectorAll('.stat-value');
+            counters.forEach(counter => {
+                const rect = counter.getBoundingClientRect();
+                const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+                
+                if (isVisible && !counter.classList.contains('animated')) {
+                    counter.classList.add('animated');
+                    const target = parseFloat(counter.textContent.replace(/,/g, ''));
+                    const increment = target / 100;
+                    let current = 0;
+                    
+                    const timer = setInterval(() => {
+                        current += increment;
+                        if (current >= target) {
+                            current = target;
+                            clearInterval(timer);
+                        }
+                        
+                        if (target > 1000000) {
+                            counter.textContent = Math.floor(current).toLocaleString();
+                        } else if (target > 1000) {
+                            counter.textContent = Math.floor(current).toLocaleString();
+                        } else {
+                            counter.textContent = Math.floor(current);
+                        }
+                    }, 20);
+                }
+            });
+        }
+
+        // Scroll event listener
+        window.addEventListener('scroll', () => {
+            animateOnScroll();
+            animateCounters();
+        });
+
+        // Initialize chart and animations
+        document.addEventListener('DOMContentLoaded', function() {
+            updateChart();
+            
+            // Trigger animations for elements in viewport
+            setTimeout(() => {
+                animateOnScroll();
+                animateCounters();
+            }, 2500); // After loader disappears
+        });
+
+        // Responsive navigation
+        function toggleMobileNav() {
+            const navLinks = document.querySelector('.nav-links');
+            navLinks.classList.toggle('active');
+        }
+
+        // Add mobile menu button (for very small screens)
+        if (window.innerWidth <= 480) {
+            const nav = document.querySelector('.nav');
+            const mobileMenuBtn = document.createElement('button');
+            mobileMenuBtn.innerHTML = '☰';
+            mobileMenuBtn.className = 'mobile-menu-btn';
+            mobileMenuBtn.style.cssText = `
+                background: none;
+                border: none;
+                color: var(--text-primary);
+                font-size: 1.5rem;
+                cursor: pointer;
+                display: none;
+            `;
+            
+            nav.appendChild(mobileMenuBtn);
+            mobileMenuBtn.addEventListener('click', toggleMobileNav);
+        }
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                // Close any open modals or menus
+                document.querySelectorAll('.active').forEach(el => {
+                    if (el.classList.contains('brand-item')) {
+                        toggleBrand(el);
+                    }
+                });
+            }
+        });
+
+        // Performance optimization: debounce scroll events
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Apply debounced scroll
+        const debouncedScroll = debounce(() => {
+            animateOnScroll();
+            animateCounters();
+        }, 16); // ~60fps
+
+        window.addEventListener('scroll', debouncedScroll);
+
+        // Add loading states for interactive elements
+        function addLoadingState(element) {
+            element.style.opacity = '0.6';
+            element.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                element.style.opacity = '1';
+                element.style.pointerEvents = 'auto';
+            }, 300);
+        }
+
+        // Enhanced brand item interactions
+        document.querySelectorAll('.brand-item').forEach(item => {
+            item.addEventListener('click', function() {
+                addLoadingState(this);
+            });
+        });
+
+        // Add tooltips for chart bars
+        chartData.forEach((data, index) => {
+            setTimeout(() => {
+                const bars = document.querySelectorAll('.chart-bar');
+                if (bars[index]) {
+                    bars[index].title = `Embodied Carbon: ${data.value} kgCO₂e/m²`;
+                }
+            }, 3000);
+        });
+
+        // Add accessibility improvements
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.setAttribute('role', 'button');
+            btn.setAttribute('tabindex', '0');
+            
+            btn.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.click();
+                }
+            });
+        });
+
+        // Add focus management
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                // Add focus styles for keyboard navigation
+                document.body.classList.add('keyboard-nav');
+            }
+        });
+
+        document.addEventListener('mousedown', function() {
+            document.body.classList.remove('keyboard-nav');
+        });
+
+        // Print styles handler
+        window.addEventListener('beforeprint', function() {
+            document.body.setAttribute('data-theme', 'light');
+        });
+
+        window.addEventListener('afterprint', function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+            }
+        });
+          document.addEventListener("click", function (e) {
+    const ripple = document.createElement("div");
+    ripple.className = "ripple-effect";
+    ripple.style.left = `${e.clientX}px`;
+    ripple.style.top = `${e.clientY}px`;
+    document.body.appendChild(ripple);
+
+    setTimeout(() => ripple.remove(), 600); // Remove after animation ends
+  });
+    </script>
+
+    <style>
+        .ripple-effect {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: rgba(0, 150, 255, 0.3);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: ripple-animation 0.6s ease-out forwards;
+  transform: translate(-50%, -50%) scale(0);
+}
+
+@keyframes ripple-animation {
+  to {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
+}
+
+        /* Additional animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Animation classes */
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .slide-in-left {
+            animation: slideInLeft 0.6s ease forwards;
+        }
+
+        /* Keyboard navigation styles */
+        .keyboard-nav .filter-btn:focus,
+        .keyboard-nav .theme-toggle:focus,
+        .keyboard-nav .download-btn:focus {
+            outline: 2px solid var(--accent-primary);
+            outline-offset: 2px;
+        }
+
+        /* Enhanced mobile styles */
+        @media (max-width: 480px) {
+            .mobile-menu-btn {
+                display: block !important;
+            }
+            
+            .nav-links {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--bg-secondary);
+                flex-direction: column;
+                padding: 1rem;
+                box-shadow: var(--shadow);
+                transform: translateY(-100%);
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+            
+            .nav-links.active {
+                transform: translateY(0);
+                opacity: 1;
+                visibility: visible;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .loader,
+            .theme-toggle,
+            .mobile-menu-btn {
+                display: none !important;
+            }
+            
+            .brand-kits {
+                background: white !important;
+                color: black !important;
+            }
+            
+            .brand-item {
+                background: white !important;
+                border: 1px solid #ccc !important;
+            }
+            
+            .chart-bar {
+                background: #666 !important;
+            }
+        }
+
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            :root {
+                --accent-primary: #000000;
+                --text-primary: #000000;
+                --bg-primary: #ffffff;
+                --border-color: #000000;
+            }
+            
+            [data-theme="dark"] {
+                --accent-primary: #ffffff;
+                --text-primary: #ffffff;
+                --bg-primary: #000000;
+                --border-color: #ffffff;
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</body>
+</html>
