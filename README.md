@@ -8,7 +8,7 @@ Welcome to my submission for **Round 1: Replicate & Innovate** of the Frontend B
 ## 🌐 Live Demo
 
 👉 [Deployed Link](https://your-live-url.netlify.app)  
-👉 [GitHub Repository](https://github.com/yourusername/frontend-battle-submission)
+👉 [GitHub Repository](https://github.com/krishar01/vibecoding_round_1)
 
 ---
 
